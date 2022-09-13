@@ -1,0 +1,9 @@
+Path:
+	/ — information
+	/tree — requires a GET value "text" in order to give a table json structure
+		
+In order to connect the image extract the algorithm.7z archive and write this in console:
+docker load < algorithm.tar
+
+Check if the image is loaded with:
+docker images
