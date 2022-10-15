@@ -43,7 +43,6 @@ def find_features(root, indent=''):
     nodes = []
 
     for token in root:
-        #print('Token ', token, ": ", str(token.tag_))
         if 'VB' in str(token.tag_):
             subj = " ".join([str(s.text) for s in find_deps(token, ['nsubj', 'nmod'], 2, ['VB'], ['obj', 'amod', 'punct'])])
             obj = " ".join([str(o.text) for o in find_deps(token, ['obj'], 2, ['VB'], ['subj', 'nmod', 'punct' ])])
@@ -53,25 +52,27 @@ def find_features(root, indent=''):
             node.children.append(Node(str(token.text), obj + ' ' + obj_details))
             nodes.append(node)
     
-        if len(nodes) == 0:
-            for token in root:
-                if str(token.tag_) == 'NN' and str(token.dep_) == 'nsubj' and str(token.head.tag_) == 'JJ':
-                    node = Node(token.text, token.head.text)
-                    nodes.append(node)
+    for token in root:
+        if str(token.tag_) == 'NN' and str(token.dep_) == 'nsubj':
+            node = Node(token.text, token.head.text)
+            if node not in nodes:
+                nodes.append(node)
 
     return nodes
 
 def to_row(text):
-  try:
-    node = node = Node('Root', 'root', find_features(text_to_dep(text)))
-    node.assign_parent()
+    try:
+        node = node = Node('Root', 'root', find_features(text_to_dep(text)))
+        node.assign_parent()
 
-    flattened_texts = node.str_flatten().split('\n')[:-1]
-
-    structure = pd.DataFrame({
-        'ef': flattened_texts, 
-        'sent_word': [links.split(' — ')[-1].split(': ')[-1] for links in flattened_texts]})
-    return structure.to_json(orient='records').encode('utf-8').decode('unicode_escape') if structure.shape[0] > 0 else '{"ef": "Doesn\'t have an opinion"}'
-  except Exception as e:
-    print(e)
-    return '{"ef": "Doesn\'t have an opinion"}'
+        flattened_texts = node.str_flatten().split('\n')[:-1]
+        
+        ef = node.get_ef()
+        structure = pd.DataFrame({
+            'ef': [links.split(' — ')[0] + " ".join(links.split(' — ')[-1].split(': ')[::-1]) for links in flattened_texts],
+            'entity': [e['e'] for e in ef],
+            'sent_word': [e['f'] for e in ef]})
+        return structure.to_json(orient='records').encode('utf-8').decode('unicode_escape') if structure.shape[0] > 0 else '{"ef": "Doesn\'t have an opinion"}'
+    except Exception as e:
+        print(e)
+        return '{"ef": "Doesn\'t have an opinion"}'
